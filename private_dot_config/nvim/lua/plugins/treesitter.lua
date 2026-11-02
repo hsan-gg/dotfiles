@@ -1,45 +1,37 @@
 vim.pack.add({
-  {
-    src = "https://github.com/nvim-treesitter/nvim-treesitter",
-  },
+  "https://github.com/nvim-treesitter/nvim-treesitter",
 })
 
-local ok, treesitter = pcall(require, "nvim-treesitter.configs")
+-- nvim-treesitter `main` branch API (the old `nvim-treesitter.configs` module no longer exists).
+-- Building parsers needs the `tree-sitter` CLI (pacman -S tree-sitter-cli) and a C compiler.
+local ts = require("nvim-treesitter")
+local can_build = vim.fn.executable("tree-sitter") == 1
 
-if not ok then
-  vim.notify(
-    "nvim-treesitter is not installed yet. Restart Neovim and try again.",
-    vim.log.levels.WARN
-  )
-  return
+local wanted = {
+  "bash", "c", "cpp", "css", "html", "javascript", "json", "lua", "markdown",
+  "markdown_inline", "python", "rust", "typescript", "tsx", "vim", "vimdoc", "yaml",
+}
+
+if can_build then
+  ts.install(wanted) -- async; already-installed parsers are skipped
+else
+  vim.notify_once("treesitter: install tree-sitter-cli to build parsers", vim.log.levels.WARN)
 end
 
-treesitter.setup({
-  ensure_installed = {
-    "bash",
-    "c",
-    "cpp",
-    "css",
-    "html",
-    "javascript",
-    "json",
-    "lua",
-    "markdown",
-    "python",
-    "rust",
-    "typescript",
-    "vim",
-    "vimdoc",
-    "yaml",
-  },
+local available = {}
+for _, lang in ipairs(ts.get_available()) do
+  available[lang] = true
+end
 
-  auto_install = true,
-
-  highlight = {
-    enable = true,
-  },
-
-  indent = {
-    enable = true,
-  },
+vim.api.nvim_create_autocmd("FileType", {
+  callback = function(ev)
+    local lang = vim.treesitter.language.get_lang(ev.match) or ev.match
+    -- auto-install parsers for other languages on first open
+    if can_build and available[lang] and not vim.list_contains(ts.get_installed(), lang) then
+      ts.install(lang)
+    end
+    if pcall(vim.treesitter.start, ev.buf, lang) then
+      vim.bo[ev.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+    end
+  end,
 })

@@ -1,20 +1,11 @@
 vim.pack.add({
   "https://github.com/neovim/nvim-lspconfig",
   "https://github.com/hrsh7th/cmp-nvim-lsp",
-  "https://github.com/lukas-reineke/lsp-format.nvim",
 })
 
 local capabilities = require("cmp_nvim_lsp").default_capabilities()
 
--- ========================================
--- Format on save (lsp-format)
--- ========================================
-
-require("lsp-format").setup({
-  c    = { tab_width = 4 },
-  cpp  = { tab_width = 4 },
-  yaml = { tab_width = 2 },
-})
+-- Formatting is handled by conform.nvim (plugins/format.lua)
 
 -- ========================================
 -- Server configs (only put overrides here)
@@ -72,12 +63,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(event)
     local buf = event.buf
 
-    -- Attach lsp-format to this client
-    local client = vim.lsp.get_client_by_id(event.data.client_id)
-    if client then
-      require("lsp-format").on_attach(client, buf)
-    end
-
     local map = function(mode, lhs, rhs, desc)
       vim.keymap.set(mode, lhs, rhs, { buffer = buf, silent = true, desc = desc })
     end
@@ -85,7 +70,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
     -- Navigation
     map("n", "gd", vim.lsp.buf.definition, "Go to Definition")
     map("n", "gD", vim.lsp.buf.declaration, "Go to Declaration")
-    map("n", "gr", vim.lsp.buf.references, "Find References")
+    -- References: use the built-in `grr` (plain `gr` would shadow grn/gra/grr/gri)
     map("n", "gI", vim.lsp.buf.implementation, "Go to Implementation")
 
     -- Documentation
@@ -95,11 +80,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
     -- Refactoring
     map("n", "<leader>rn", vim.lsp.buf.rename, "Rename Symbol")
     map("n", "<leader>ca", vim.lsp.buf.code_action, "Code Action")
-
-    -- Formatting
-    map({ "n", "v" }, "<leader>f", function()
-      vim.lsp.buf.format({ async = true })
-    end, "Format")
   end,
 })
 
@@ -107,7 +87,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
 -- Diagnostic Keymaps (global, not attach-dependent)
 -- ========================================
 
-vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, { desc = "Previous Diagnostic" })
-vim.keymap.set("n", "]d", vim.diagnostic.goto_next, { desc = "Next Diagnostic" })
+-- [d / ]d (prev/next diagnostic) are built in since Neovim 0.11
 vim.keymap.set("n", "<leader>d", vim.diagnostic.open_float, { desc = "Show Diagnostic" })
 vim.keymap.set("n", "<leader>xx", vim.diagnostic.setloclist, { desc = "Show Diagnostics" })
