@@ -1,0 +1,4 @@
+# Starship prompt config
+
+[aws]
+disabled = true
